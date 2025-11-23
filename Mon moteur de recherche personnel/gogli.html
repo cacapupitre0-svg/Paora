@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paora - Le moteur de recherche qui change votre vie</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Roboto',sans-serif; }
+body { min-height:100vh; background: linear-gradient(135deg,#ff9a9e 0%,#fad0c4 100%);
+       display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:50px 20px; }
+
+.container { width:100%; max-width:1200px; text-align:center; }
+.logo { font-size:4rem; font-weight:700; color:#ff6f61; margin-bottom:10px; animation: pop 1s ease; }
+@keyframes pop { 0%{transform:scale(0);} 100%{transform:scale(1);} }
+.cover { width:100%; max-height:250px; object-fit:cover; border-radius:20px; margin-bottom:30px; box-shadow:0 12px 30px rgba(0,0,0,0.2); }
+
+h1 { font-size:3rem; color:#333; margin-bottom:10px; }
+p.subtitle { font-size:1.2rem; color:#555; margin-bottom:30px; }
+
+.search-bar { display:flex; justify-content:center; max-width:600px; margin:0 auto 40px;
+             border-radius:50px; overflow:hidden; box-shadow:0 8px 25px rgba(0,0,0,0.2); animation: float 3s ease-in-out infinite; }
+.search-bar input { flex:1; padding:18px 25px; font-size:1.1rem; border:none; outline:none; }
+.search-bar button { padding:18px 25px; font-size:1.2rem; background:#ff6f61; color:white; border:none; cursor:pointer; transition:0.3s; }
+.search-bar button:hover { background:#ff3b2f; }
+@keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
+
+.news-section { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:25px; margin-bottom:20px; }
+.news-card { background:white; border-radius:15px; padding:15px; box-shadow:0 8px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s, opacity 0.5s; opacity:0; }
+.news-card.show { opacity:1; }
+.news-card:hover { transform:translateY(-10px); box-shadow:0 12px 30px rgba(0,0,0,0.15); }
+.news-card img { width:100%; height:150px; object-fit:cover; border-radius:12px; margin-bottom:12px; transition: transform 0.3s; }
+.news-card:hover img { transform: scale(1.05); }
+.news-card h3 { font-size:1.2rem; margin-bottom:8px; color:#333; }
+.news-card p { font-size:0.95rem; color:#666; margin-bottom:8px; }
+.news-card a { color:#ff6f61; font-weight:500; text-decoration:none; }
+.news-card a:hover { text-decoration:underline; }
+
+.pagination { display:flex; justify-content:center; gap:10px; margin-top:20px; }
+.page-btn { padding:8px 15px; background:#ff6f61; color:white; border:none; border-radius:50px; cursor:pointer; transition:0.3s; }
+.page-btn:hover { background:#ff3b2f; }
+
+footer { margin-top:40px; color:#333; font-size:0.9rem; text-align:center; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="logo">Paora</div>
+    <img class="cover" src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800" alt="Cover Image">
+    <h1>Bienvenue sur Paora</h1>
+    <p class="subtitle">Le moteur de recherche qui change votre vie. Trouvez tout ce que vous cherchez rapidement et avec style.</p>
+    <form class="search-bar" onsubmit="searchPaora(event)">
+        <input type="text" id="searchInput" placeholder="Tapez votre recherche...">
+        <button type="submit">🔍</button>
+    </form>
+    <div class="news-section" id="newsSection"></div>
+    <div class="pagination" id="pagination"></div>
+    <footer>© 2025 Paora Inc.</footer>
+</div>
+
+<script>
+const API_KEY = 'AIzaSyDR6C0Z5tyLbI_UksaLWdfeLi8wkAbevok'; // Remplace par ta clé API Google
+const CX = 'b33e11bd069c8495d'; // Remplace par ton ID Custom Search Engine
+let currentQuery = '';
+let startIndex = 1;
+
+async function searchPaora(event,page=1){
+    event?.preventDefault();
+    const query = document.getElementById('searchInput').value || currentQuery;
+    if(query !== currentQuery){ startIndex=1; currentQuery=query; }
+    else startIndex = (page-1)*10 + 1;
+
+    const newsSection = document.getElementById('newsSection');
+    const pagination = document.getElementById('pagination');
+    newsSection.innerHTML = '<p style="color:#333;">Chargement des résultats...</p>';
+    pagination.innerHTML = '';
+
+    try{
+        const res = await fetch(`https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX}&q=${encodeURIComponent(query)}&start=${startIndex}`);
+        const data = await res.json();
+        newsSection.innerHTML = '';
+        if(data.items){
+            data.items.forEach((item,i)=>{
+                const card = document.createElement('div');
+                card.classList.add('news-card');
+                card.innerHTML = `
+                    <img src="${item.pagemap?.cse_image?.[0]?.src || 'https://via.placeholder.com/280x150'}" alt="${item.title}">
+                    <h3>${item.title}</h3>
+                    <p>${item.snippet}</p>
+                    <a href="${item.link}" target="_blank">Voir la page</a>
+                `;
+                newsSection.appendChild(card);
+                setTimeout(()=>{ card.classList.add('show'); }, i*100);
+            });
+
+            // Pagination simple
+            const total = Math.min(data.searchInformation.totalResults, 50); 
+            const pages = Math.ceil(total/10);
+            for(let i=1;i<=pages;i++){
+                const btn = document.createElement('button');
+                btn.classList.add('page-btn');
+                btn.textContent=i;
+                btn.onclick=()=>searchPaora(null,i);
+                pagination.appendChild(btn);
+            }
+
+        } else newsSection.innerHTML = '<p style="color:#333;">Aucun résultat trouvé.</p>';
+    } catch(err){
+        newsSection.innerHTML = '<p style="color:#333;">Erreur lors de la recherche.</p>';
+        console.error(err);
+    }
+}
+</script>
+</body>
+</html>
